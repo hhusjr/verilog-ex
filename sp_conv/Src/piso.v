@@ -1,20 +1,20 @@
 `timescale 1ns / 1ps
 
-`define S_READY 0
-`define S_BEGIN 1
-`define S_BIT0  2
-`define S_BIT1  3
-`define S_BIT2  4
-`define S_BIT3  5
-`define S_STOP  6
-`define S_END   7
-
 // Parallel to Serial
 // 并行数据转串行数据
-module piso(rst, data, sclk, d_en, scl, sda, state);
+module piso(rst, data, sclk, d_en, scl, sda);
+    // 状态定义
+    parameter S_READY = 0;
+    parameter S_BEGIN = 1;
+    parameter S_BIT0  = 2; 
+    parameter S_BIT1  = 3;    
+    parameter S_BIT2  = 4;    
+    parameter S_BIT3  = 5;    
+    parameter S_STOP  = 6;    
+    parameter S_END   = 7;    
+
     input rst, data, sclk, d_en;
     output scl, sda;
-    output state;
     
     wire [3:0] data;
     reg scl, sda;
@@ -35,15 +35,15 @@ module piso(rst, data, sclk, d_en, scl, sda, state);
     // 状态转换组合逻辑（计算下一个状态）
     always @(*) begin
         case (state)
-            `S_READY: next_state = d_en ? `S_BEGIN : `S_READY;            
-            `S_BEGIN: next_state = scl ? `S_BIT0 : `S_BEGIN;            
-            `S_BIT0:  next_state = !scl ? `S_BIT1 : `S_BIT0;            
-            `S_BIT1:  next_state = !scl ? `S_BIT2 : `S_BIT1;            
-            `S_BIT2:  next_state = !scl ? `S_BIT3 : `S_BIT2;            
-            `S_BIT3:  next_state = !scl ? `S_STOP : `S_BIT3;            
-            `S_STOP:  next_state = !scl ? `S_END : `S_STOP;
-            `S_END:   next_state = scl ? `S_READY : `S_END;
-            default:  next_state = `S_READY;
+            S_READY: next_state = d_en ? S_BEGIN : S_READY;            
+            S_BEGIN: next_state = scl ? S_BIT0 : S_BEGIN;            
+            S_BIT0:  next_state = !scl ? S_BIT1 : S_BIT0;            
+            S_BIT1:  next_state = !scl ? S_BIT2 : S_BIT1;            
+            S_BIT2:  next_state = !scl ? S_BIT3 : S_BIT2;            
+            S_BIT3:  next_state = !scl ? S_STOP : S_BIT3;            
+            S_STOP:  next_state = !scl ? S_END : S_STOP;
+            S_END:   next_state = scl ? S_READY : S_END;
+            default:  next_state = S_READY;
         endcase
     end
     
@@ -51,13 +51,13 @@ module piso(rst, data, sclk, d_en, scl, sda, state);
     always @(negedge sclk) begin
         if (!rst) begin
             case (state)
-                `S_BEGIN: if (scl)  sda <= 0;
-                `S_BIT0:  if (!scl) sda <= dbuf[0];
-                `S_BIT1:  if (!scl) sda <= dbuf[1];
-                `S_BIT2:  if (!scl) sda <= dbuf[2];
-                `S_BIT3:  if (!scl) sda <= dbuf[3];
-                `S_STOP:  if (!scl) sda <= 0;
-                `S_END:   if (scl)  sda <= 1;
+                S_BEGIN: if (scl)  sda <= 0;
+                S_BIT0:  if (!scl) sda <= dbuf[0];
+                S_BIT1:  if (!scl) sda <= dbuf[1];
+                S_BIT2:  if (!scl) sda <= dbuf[2];
+                S_BIT3:  if (!scl) sda <= dbuf[3];
+                S_STOP:  if (!scl) sda <= 0;
+                S_END:   if (scl)  sda <= 1;
                 default:  sda <= 1;
             endcase
         end else begin
@@ -67,6 +67,6 @@ module piso(rst, data, sclk, d_en, scl, sda, state);
     
     // 状态转换时序逻辑
     always @(negedge sclk) begin
-        state <= rst ? `S_READY : next_state;
+        state <= rst ? S_READY : next_state;
     end
 endmodule
