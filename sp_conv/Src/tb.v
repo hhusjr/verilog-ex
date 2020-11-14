@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module piso_tb;
+module tb;
     reg sclk, rst, d_en;
     reg [3:0] data;
     wire [3:0] st;
@@ -28,22 +28,24 @@ module piso_tb;
     initial begin
         d_en = 0;
         #250;
-        data = 4'b1101;
-        d_en = 1;
-        #200;
-        d_en = 0;
-        #10000;
-        data = 4'b0100;
-        d_en = 1;
-        #200;
-        d_en = 0;
-        #10000;
-        data = 4'b1011;
-        d_en = 1;
-        #200;
-        d_en = 0;
+        
+        data = 0;
+        while (1) begin
+            data = data + 1;
+            d_en = 1;
+            $display("Sent: %d", data);
+            #200;
+            d_en = 0;
+            #10000;
+            
+            if (data == 4'b1111) $stop;
+        end
+    end
+    
+    always @(posedge rx) begin
+        $display("Received: %d", dataout);
     end
     
     piso ps(.sclk(sclk), .rst(rst), .d_en(d_en), .data(data), .scl(scl), .sda(sda));
-    sipo sp(.sda(sda), .scl(scl), .rst(rst), .data(dataout), .state(st), .rx(rx));
+    sipo sp(.sda(sda), .scl(scl), .rst(rst), .data(dataout), .rx(rx));
 endmodule
