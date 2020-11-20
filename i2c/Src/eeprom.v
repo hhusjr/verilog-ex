@@ -26,7 +26,9 @@ module eeprom(sda, scl, rst);
     parameter RD = 1'b1; // 读
 
     // 寄存器定义
-    reg [7:0] mem [2047:0];
+    wire [7:0] mem_out;
+    reg [7:0] mem_in;
+    reg mem_en;
     reg [7:0] sda_buf;
     reg out_flg;
     reg [7:0] state;
@@ -35,6 +37,15 @@ module eeprom(sda, scl, rst);
     reg [7:0] ctrl;
     reg [10:0] addr;
     reg en, read_en;
+    
+    // DRAM内存
+    dist_mem_gen_0 mem(
+        .clk(scl),
+        .d(mem_in),
+        .a(addr),
+        .we(mem_en),
+        .spo(mem_out)
+    );
     
     // SDA为双向总线，需要指定输入输出
     assign sda = out_flg ? sda_buf[7] : 1'bz;
@@ -80,8 +91,9 @@ module eeprom(sda, scl, rst);
         sda_buf <= 0;
         out_flg <= DISABLED;
         count <= 0;
+        mem_en <= DISABLED;
         if (rst) begin
-            case (state)
+            (* full_case *) case (state)
                 CTRL: begin
                     ctrl <= {ctrl[6:0], sda};
                     count <= count + 1;
@@ -94,14 +106,15 @@ module eeprom(sda, scl, rst);
                 end
                 DATA: begin
                     if (ctrl[0] == WR) begin
-                        mem[addr] <= {mem[addr][6:0], sda};
+                        mem_in <= {mem_in[6:0], sda};
                         out_flg <= count == 7;
                     end else if (ctrl[0] == RD) begin
-                        sda_buf <= count == 0 ? mem[addr] : {sda_buf[6:0], 1'b0};
+                        sda_buf <= count == 0 ? mem_out : {sda_buf[6:0], 1'b0};
                         out_flg <= ENABLED;
                     end
                     count <= count + 1;
                 end
+                DATA_ACK: mem_en <= ENABLED;
             endcase
         end
     end

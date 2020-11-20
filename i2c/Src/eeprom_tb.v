@@ -53,6 +53,46 @@ module eeprom_tb;
         sdi = 0;
         #50;
         sdi = 1;
+        
+        // 读
+        #50;
+        en_in = 1;
+        // 启动信号
+        sdi = 1;
+        #50;
+        sdi = 0;
+        #50;
+        // 控制串
+        en_in = 1;
+        send_byte(8'b10100001);
+        // 等待应答位
+        en_in = 0;
+        send_bit(1'b1);
+        // EEPROM存储单元地址
+        en_in = 1;
+        send_byte(10'b1000000000);
+        // 等待应答位
+        en_in = 0;
+        send_bit(1'b1);
+        // 启动信号
+        sdi = 1;
+        #50;
+        sdi = 0;
+        #50;
+        // 控制串
+        en_in = 1;
+        send_byte(8'b10100001);
+        // 等待应答位
+        en_in = 0;
+        send_bit(1'b1);
+        // 获得数据
+        en_in = 0;
+        #800;
+        // 产生停止信号
+        en_in = 1;
+        sdi = 0;
+        #50;
+        sdi = 1;
     end
     
     task send_bit;
