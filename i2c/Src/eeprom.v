@@ -30,7 +30,7 @@ module eeprom(sda, scl, rst);
     reg [7:0] mem_in;
     reg mem_en;
     reg [7:0] sda_buf;
-    reg out_flg;
+    reg bus_ctrl;
     reg [7:0] state;
     reg [7:0] next_state;
     reg [3:0] count;
@@ -47,8 +47,8 @@ module eeprom(sda, scl, rst);
         .spo(mem_out)
     );
     
-    // SDA为双向总线，需要指定输入输出
-    assign sda = out_flg ? sda_buf[7] : 1'bz;
+    // SDA为双向总线，仅当应答或者读取的时候，从机获得总线控制权
+    assign sda = bus_ctrl ? sda_buf[7] : 1'bz;
     
     // 检测是否启动或停止
     always @(negedge sda or negedge rst) begin
@@ -72,7 +72,7 @@ module eeprom(sda, scl, rst);
                 IDLE: next_state = en ? CTRL : IDLE;
                 CTRL: next_state = count == 7 ? CTRL_ACK : CTRL;
                 CTRL_ACK: next_state = (ctrl[0] == WR) ? ADDR : DATA;
-                ADDR: next_state = count == 10 ? ADDR_ACK : ADDR;
+                ADDR: next_state = count == 7 ? ADDR_ACK : ADDR;
                 ADDR_ACK: next_state = read_en ? CTRL : DATA;
                 DATA: next_state = count == 7 ? DATA_ACK : DATA;
                 DATA_ACK: next_state = IDLE;
@@ -89,7 +89,7 @@ module eeprom(sda, scl, rst);
     // 状态机输出逻辑
     always @(negedge scl or negedge rst) begin
         sda_buf <= 0;
-        out_flg <= DISABLED;
+        bus_ctrl <= DISABLED;
         count <= 0;
         mem_en <= DISABLED;
         if (rst) begin
@@ -97,20 +97,20 @@ module eeprom(sda, scl, rst);
                 CTRL: begin
                     ctrl <= {ctrl[6:0], sda};
                     count <= count + 1;
-                    out_flg <= count == 7;
+                    bus_ctrl <= count == 7;
                 end
                 ADDR: begin
                     addr <= {addr[9:0], sda};
                     count <= count + 1;
-                    out_flg <= count == 10;
+                    bus_ctrl <= count == 7;
                 end
                 DATA: begin
                     if (ctrl[0] == WR) begin
                         mem_in <= {mem_in[6:0], sda};
-                        out_flg <= count == 7;
+                        bus_ctrl <= count == 7;
                     end else if (ctrl[0] == RD) begin
                         sda_buf <= count == 0 ? mem_out : {sda_buf[6:0], 1'b0};
-                        out_flg <= ENABLED;
+                        bus_ctrl <= ENABLED;
                     end
                     count <= count + 1;
                 end
